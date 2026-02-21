@@ -1,0 +1,471 @@
+{
+  "info": {
+    "_postman_id": "agent-infra-api-collection",
+    "name": "Agent Infra API",
+    "description": "API collection for Agent Infra - AI Agent with LLM, Memory, RAG, and Tools",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the service is running"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user123\",\n  \"message\": \"Hello! What can you do?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "chat"]
+            },
+            "description": "Send a message to the AI agent"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message (with Session)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user123\",\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"What is my name?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "chat"]
+            },
+            "description": "Continue conversation with session ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tools",
+      "item": [
+        {
+          "name": "List Tools",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/tools",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tools"]
+            },
+            "description": "List all available tools with schemas"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Tool - memory_save",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user123\",\n  \"toolName\": \"memory_save\",\n  \"args\": {\n    \"text\": \"My favorite color is blue\",\n    \"tags\": [\"preference\", \"color\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tools/call",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tools", "call"]
+            },
+            "description": "Save a memory"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Tool - memory_search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user123\",\n  \"toolName\": \"memory_search\",\n  \"args\": {\n    \"query\": \"favorite color\",\n    \"limit\": 5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tools/call",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tools", "call"]
+            },
+            "description": "Search memories"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Tool - time_now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user123\",\n  \"toolName\": \"time_now\",\n  \"args\": {}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tools/call",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tools", "call"]
+            },
+            "description": "Get current time"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "RAG (ADMIN ONLY)",
+      "item": [
+        {
+          "name": "Ingest Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"myproject\",\n  \"source\": \"docs/guide.md\",\n  \"content\": \"# Guide\\n\\nThis is a comprehensive guide about TypeScript and AI development.\\n\\nTypeScript provides type safety and better developer experience.\",\n  \"metadata\": {\n    \"category\": \"documentation\",\n    \"author\": \"Team\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/rag/ingest",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "rag", "ingest"]
+            },
+            "description": "Ingest a document for RAG (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/rag/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "rag", "jobs", "{{jobId}}"]
+            },
+            "description": "Check ingestion job status (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/rag/search?tenantId=myproject&query=typescript&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "rag", "search"],
+              "query": [
+                {
+                  "key": "tenantId",
+                  "value": "myproject"
+                },
+                {
+                  "key": "query",
+                  "value": "typescript"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Search ingested documents (Master key only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Key Management (ADMIN ONLY)",
+      "item": [
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "keys"]
+            },
+            "description": "List all API keys (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Production App\",\n  \"description\": \"Key for production application\",\n  \"permissions\": [\"chat\", \"tools\", \"rag\"],\n  \"expiresInDays\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "keys"]
+            },
+            "description": "Create a new API key (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/keys/{{keyId}}/revoke",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "keys", "{{keyId}}", "revoke"]
+            },
+            "description": "Revoke/deactivate an API key (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Activate API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/keys/{{keyId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "keys", "{{keyId}}", "activate"]
+            },
+            "description": "Reactivate a revoked API key (Master key only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/keys/{{keyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "keys", "{{keyId}}"]
+            },
+            "description": "Permanently delete an API key (Master key only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "OAuth",
+      "item": [
+        {
+          "name": "Get Login URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/oauth/login?redirectUrl=/",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "oauth", "login"],
+              "query": [
+                {
+                  "key": "redirectUrl",
+                  "value": "/"
+                }
+              ]
+            },
+            "description": "Get OAuth authorization URL"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/oauth/session",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "oauth", "session"]
+            },
+            "description": "Get current OAuth session (requires cookie)"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/oauth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "oauth", "logout"]
+            },
+            "description": "Logout and clear session"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8787",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "sk-your-api-key-here",
+      "type": "string"
+    },
+    {
+      "key": "masterKey",
+      "value": "sk-your-master-key-here",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "keyId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

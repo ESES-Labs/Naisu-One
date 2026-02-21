@@ -1,0 +1,37 @@
+{
+  "id": "agent-infra-env",
+  "name": "Agent Infra Local",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8787",
+      "enabled": true
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "key": "masterKey",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "key": "keyId",
+      "value": "",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
