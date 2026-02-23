@@ -44,7 +44,15 @@ const App = () => {
   }, []);
 
   if (!checked) {
-    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center">Checking session...</div>;
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-muted border-t-primary" />
+          <h2 className="text-base font-semibold text-card-foreground">Preparing Agent Hub</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Verifying your admin session...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
