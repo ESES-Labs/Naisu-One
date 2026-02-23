@@ -1,9 +1,7 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { login } from '@/services/authApi';
 
 export default function Login() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +17,7 @@ export default function Login() {
         setError('Invalid username or password');
         return;
       }
-      navigate('/', { replace: true });
+      window.location.replace('/');
     } catch (err: any) {
       setError(err?.message || 'Login failed');
     } finally {
@@ -39,7 +37,7 @@ export default function Login() {
           <div>
             <label className="block text-sm mb-1 text-foreground">Username</label>
             <input
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
@@ -51,7 +49,7 @@ export default function Login() {
             <label className="block text-sm mb-1 text-foreground">Password</label>
             <input
               type="password"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
