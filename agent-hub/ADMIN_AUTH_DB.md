@@ -1,6 +1,6 @@
 # Agent Hub Admin Auth (Postgres)
 
-Agent Hub now uses Postgres-backed admin auth/session.
+Agent Hub uses Postgres-backed admin auth/session.
 
 ## Required env (Vercel project: agent-hub)
 
@@ -9,20 +9,21 @@ Agent Hub now uses Postgres-backed admin auth/session.
 - `DATABASE_URL`
 - optional: `ADMIN_SESSION_MAX_AGE_SECONDS`
 
-## Bootstrap first admin user
+## Super admin bootstrap (recommended)
 
-1) Generate scrypt hash:
+Set these env vars in Vercel:
+
+- `SUPERADMIN_USERNAME` (e.g. `jar`)
+- and one of:
+  - `SUPERADMIN_PASSWORD_HASH` (recommended)
+  - `SUPERADMIN_PASSWORD` (temporary/easier)
+
+On first request, schema init will upsert this user as `super_admin` and active.
+
+## Generate password hash
 
 ```bash
 node -e "const c=require('crypto');const p=process.argv[1];const s=c.randomBytes(16);const d=c.scryptSync(p,s,64);console.log('scrypt$'+s.toString('hex')+'$'+d.toString('hex'))" 'YOUR_PASSWORD'
-```
-
-2) Insert admin row (run against your Postgres):
-
-```sql
-INSERT INTO admin_users (username, password_hash, role, is_active)
-VALUES ('jar', 'scrypt$<saltHex>$<hashHex>', 'admin', true)
-ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = true;
 ```
 
 ## Endpoints
