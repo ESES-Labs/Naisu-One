@@ -1,14 +1,7 @@
 import crypto from 'crypto';
+import { ensureAuthSchema, getDb } from './_db.js';
 
 const COOKIE_NAME = 'agenthub_session';
-
-function getSecret(): string {
-  const secret = process.env.ADMIN_SESSION_SECRET;
-  if (!secret || secret.length < 16) {
-    throw new Error('ADMIN_SESSION_SECRET is missing or too short (min 16 chars)');
-  }
-  return secret;
-}
 
 export function parseCookie(cookieHeader?: string): Record<string, string> {
   if (!cookieHeader) return {};
@@ -26,52 +19,6 @@ export function parseCookie(cookieHeader?: string): Record<string, string> {
     }, {});
 }
 
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-}
-
-function sign(payload: string): string {
-  return base64url(
-    crypto.createHmac('sha256', getSecret()).update(payload).digest()
-  );
-}
-
-export function createSessionToken(username: string, maxAgeSeconds: number): string {
-  const exp = Math.floor(Date.now() / 1000) + maxAgeSeconds;
-  const payload = base64url(JSON.stringify({ u: username, exp }));
-  const sig = sign(payload);
-  return `${payload}.${sig}`;
-}
-
-export function verifySessionToken(token?: string): { ok: boolean; username?: string } {
-  if (!token) return { ok: false };
-  const [payload, sig] = token.split('.');
-  if (!payload || !sig) return { ok: false };
-
-  const expected = sign(payload);
-  const sigBuf = Buffer.from(sig);
-  const expBuf = Buffer.from(expected);
-  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-    return { ok: false };
-  }
-
-  try {
-    const json = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
-      u: string;
-      exp: number;
-    };
-    if (!json?.u || !json?.exp) return { ok: false };
-    if (json.exp < Math.floor(Date.now() / 1000)) return { ok: false };
-    return { ok: true, username: json.u };
-  } catch {
-    return { ok: false };
-  }
-}
-
 export function buildSessionCookie(token: string, maxAgeSeconds: number): string {
   const secure = process.env.NODE_ENV === 'production';
   return `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}; ${secure ? 'Secure;' : ''}`;
@@ -82,19 +29,51 @@ export function buildClearSessionCookie(): string {
   return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; ${secure ? 'Secure;' : ''}`;
 }
 
-export function getSessionFromRequest(req: any): { ok: boolean; username?: string } {
-  const cookies = parseCookie(req.headers?.cookie);
-  return verifySessionToken(cookies[COOKIE_NAME]);
+function sha256(text: string): string {
+  return crypto.createHash('sha256').update(text).digest('hex');
 }
 
-export function verifyAdminPassword(input: string): boolean {
-  const plain = process.env.ADMIN_PASSWORD;
-  if (plain) return input === plain;
+export function createSessionToken(): string {
+  return crypto.randomBytes(48).toString('base64url');
+}
 
-  const hash = process.env.ADMIN_PASSWORD_HASH;
-  if (!hash) return false;
+export async function getSessionFromRequest(req: any): Promise<{ ok: boolean; userId?: number; username?: string }> {
+  await ensureAuthSchema();
 
-  // format: scrypt$<saltHex>$<hashHex>
+  const cookies = parseCookie(req.headers?.cookie);
+  const token = cookies[COOKIE_NAME];
+  if (!token) return { ok: false };
+
+  const tokenHash = sha256(token);
+  const db = getDb();
+
+  await db.query(`DELETE FROM admin_sessions WHERE expires_at < NOW()`);
+
+  const session = await db.query(
+    `
+      SELECT s.user_id, u.username
+      FROM admin_sessions s
+      JOIN admin_users u ON u.id = s.user_id
+      WHERE s.token_hash = $1
+        AND s.expires_at > NOW()
+        AND u.is_active = TRUE
+      LIMIT 1
+    `,
+    [tokenHash]
+  );
+
+  if (session.rowCount === 0) return { ok: false };
+
+  await db.query(
+    `UPDATE admin_sessions SET last_seen_at = NOW() WHERE token_hash = $1`,
+    [tokenHash]
+  );
+
+  const row = session.rows[0];
+  return { ok: true, userId: Number(row.user_id), username: row.username };
+}
+
+export function verifyPasswordHash(input: string, hash: string): boolean {
   const [algo, saltHex, hashHex] = hash.split('$');
   if (algo !== 'scrypt' || !saltHex || !hashHex) return false;
 
@@ -104,13 +83,37 @@ export function verifyAdminPassword(input: string): boolean {
   return crypto.timingSafeEqual(derived, expected);
 }
 
-export function getAdminUsername(): string {
-  return process.env.ADMIN_USERNAME || 'admin';
-}
-
 export function getSessionMaxAgeSeconds(): number {
   const raw = process.env.ADMIN_SESSION_MAX_AGE_SECONDS;
   const n = raw ? Number(raw) : 60 * 60 * 8;
   if (!Number.isFinite(n) || n <= 0) return 60 * 60 * 8;
   return Math.floor(n);
+}
+
+export async function createSessionForUser(userId: number, maxAgeSeconds: number): Promise<string> {
+  await ensureAuthSchema();
+
+  const token = createSessionToken();
+  const tokenHash = sha256(token);
+  const db = getDb();
+
+  await db.query(
+    `
+      INSERT INTO admin_sessions (token_hash, user_id, expires_at)
+      VALUES ($1, $2, NOW() + ($3 || ' seconds')::interval)
+    `,
+    [tokenHash, userId, String(maxAgeSeconds)]
+  );
+
+  return token;
+}
+
+export async function revokeSessionFromRequest(req: any): Promise<void> {
+  await ensureAuthSchema();
+  const cookies = parseCookie(req.headers?.cookie);
+  const token = cookies[COOKIE_NAME];
+  if (!token) return;
+
+  const db = getDb();
+  await db.query(`DELETE FROM admin_sessions WHERE token_hash = $1`, [sha256(token)]);
 }
