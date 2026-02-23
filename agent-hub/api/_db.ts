@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import crypto from 'crypto';
 
 let pool: Pool | null = null;
 let initialized = false;
@@ -14,6 +15,38 @@ export function getDb(): Pool {
   }
 
   return pool;
+}
+
+function scryptHash(password: string): string {
+  const salt = crypto.randomBytes(16);
+  const derived = crypto.scryptSync(password, salt, 64);
+  return `scrypt$${salt.toString('hex')}$${derived.toString('hex')}`;
+}
+
+async function bootstrapSuperAdmin(db: Pool) {
+  const username = process.env.SUPERADMIN_USERNAME;
+  if (!username) return;
+
+  const passwordHash = process.env.SUPERADMIN_PASSWORD_HASH;
+  const plainPassword = process.env.SUPERADMIN_PASSWORD;
+
+  const finalHash = passwordHash || (plainPassword ? scryptHash(plainPassword) : '');
+  if (!finalHash) {
+    throw new Error('SUPERADMIN_USERNAME is set but SUPERADMIN_PASSWORD_HASH/SUPERADMIN_PASSWORD is missing');
+  }
+
+  await db.query(
+    `
+      INSERT INTO admin_users (username, password_hash, role, is_active)
+      VALUES ($1, $2, 'super_admin', TRUE)
+      ON CONFLICT (username)
+      DO UPDATE SET
+        password_hash = EXCLUDED.password_hash,
+        role = 'super_admin',
+        is_active = TRUE
+    `,
+    [username, finalHash]
+  );
 }
 
 export async function ensureAuthSchema() {
@@ -46,6 +79,8 @@ export async function ensureAuthSchema() {
     CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at
     ON admin_sessions (expires_at);
   `);
+
+  await bootstrapSuperAdmin(db);
 
   initialized = true;
 }
