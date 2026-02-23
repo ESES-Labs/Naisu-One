@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Zap,
   FolderOpen,
+  Shield,
   LogOut,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ const navItems = [
   { title: "API Keys", url: "/api-keys", icon: Key },
   { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Knowledge Base", url: "/knowledge-base", icon: Database },
+  { title: "Admin Users", url: "/admin-users", icon: Shield },
 ];
 
 export function AppSidebar() {
