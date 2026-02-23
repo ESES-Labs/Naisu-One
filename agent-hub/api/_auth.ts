@@ -37,7 +37,7 @@ export function createSessionToken(): string {
   return crypto.randomBytes(48).toString('base64url');
 }
 
-export async function getSessionFromRequest(req: any): Promise<{ ok: boolean; userId?: number; username?: string }> {
+export async function getSessionFromRequest(req: any): Promise<{ ok: boolean; userId?: number; username?: string; role?: string }> {
   await ensureAuthSchema();
 
   const cookies = parseCookie(req.headers?.cookie);
@@ -51,7 +51,7 @@ export async function getSessionFromRequest(req: any): Promise<{ ok: boolean; us
 
   const session = await db.query(
     `
-      SELECT s.user_id, u.username
+      SELECT s.user_id, u.username, u.role
       FROM admin_sessions s
       JOIN admin_users u ON u.id = s.user_id
       WHERE s.token_hash = $1
@@ -70,7 +70,13 @@ export async function getSessionFromRequest(req: any): Promise<{ ok: boolean; us
   );
 
   const row = session.rows[0];
-  return { ok: true, userId: Number(row.user_id), username: row.username };
+  return { ok: true, userId: Number(row.user_id), username: row.username, role: row.role };
+}
+
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16);
+  const derived = crypto.scryptSync(password, salt, 64);
+  return `scrypt$${salt.toString('hex')}$${derived.toString('hex')}`;
 }
 
 export function verifyPasswordHash(input: string, hash: string): boolean {

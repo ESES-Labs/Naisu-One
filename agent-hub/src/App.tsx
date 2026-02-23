@@ -12,6 +12,7 @@ import ApiKeys from "./pages/ApiKeys";
 import Chat from "./pages/Chat";
 import Tools from "./pages/Tools";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import { getAuthMe } from "./services/authApi";
@@ -28,6 +29,7 @@ const ProtectedRoutes = () => (
       <Route path="/api-keys" element={<ApiKeys />} />
       <Route path="/chat" element={<Chat />} />
       <Route path="/knowledge-base" element={<KnowledgeBase />} />
+      <Route path="/admin-users" element={<AdminUsers />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </DashboardLayout>

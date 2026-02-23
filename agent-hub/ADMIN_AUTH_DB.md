@@ -32,3 +32,9 @@ node -e "const c=require('crypto');const p=process.argv[1];const s=c.randomBytes
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 - `GET/POST/... /api/admin-proxy?path=/v1/...` (requires session cookie)
+
+### Admin user management (super_admin)
+- `GET /api/admin-users`
+- `POST /api/admin-users`
+- `PATCH /api/admin-users/:id`
+- `DELETE /api/admin-users/:id`
