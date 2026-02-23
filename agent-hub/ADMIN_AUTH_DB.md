@@ -9,22 +9,19 @@ Agent Hub uses Postgres-backed admin auth/session.
 - `DATABASE_URL`
 - optional: `ADMIN_SESSION_MAX_AGE_SECONDS`
 
-## Super admin bootstrap (recommended)
+## Bootstrap first super admin (SQL seed)
 
-Set these env vars in Vercel:
-
-- `SUPERADMIN_USERNAME` (e.g. `jar`)
-- and one of:
-  - `SUPERADMIN_PASSWORD_HASH` (recommended)
-  - `SUPERADMIN_PASSWORD` (temporary/easier)
-
-On first request, schema init will upsert this user as `super_admin` and active.
-
-## Generate password hash
+1) Generate password hash:
 
 ```bash
-node -e "const c=require('crypto');const p=process.argv[1];const s=c.randomBytes(16);const d=c.scryptSync(p,s,64);console.log('scrypt$'+s.toString('hex')+'$'+d.toString('hex'))" 'YOUR_PASSWORD'
+node scripts/generate-password-hash.mjs 'YOUR_PASSWORD'
 ```
+
+2) Open `agent-hub/db/seed_superadmin.sql` and replace:
+- `<USERNAME>`
+- `<SCRYPT_HASH>`
+
+3) Run SQL once in Neon SQL Editor (or via `psql`).
 
 ## Endpoints
 
@@ -32,3 +29,9 @@ node -e "const c=require('crypto');const p=process.argv[1];const s=c.randomBytes
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 - `GET/POST/... /api/admin-proxy?path=/v1/...` (requires session cookie)
+
+### Admin user management (super_admin)
+- `GET /api/admin-users`
+- `POST /api/admin-users`
+- `PATCH /api/admin-users/:id`
+- `DELETE /api/admin-users/:id`
