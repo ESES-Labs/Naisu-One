@@ -16,7 +16,32 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatThread {
+  id: string;
+  title: string;
+  sessionId?: string;
+  updatedAt: string;
+  messages: Message[];
+}
+
+const CHAT_STORAGE_KEY = "agenthub.admin.chat.threads";
+
+function parseThreads(raw: string | null): ChatThread[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as ChatThread[];
+    return parsed.map((t) => ({
+      ...t,
+      messages: (t.messages || []).map((m) => ({ ...m, timestamp: new Date(m.timestamp) })),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default function Chat() {
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
@@ -28,16 +53,15 @@ export default function Chat() {
 
   const adminChat = useAdminChat({
     onSuccess: (data) => {
-      // Save session ID for conversation continuity
       setSessionId(data.sessionId);
-      
-      // Add assistant message
+
       const assistantMsg: Message = {
         id: Date.now().toString(),
         role: "assistant",
         content: data.message,
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, assistantMsg]);
       setIsLoading(false);
     },
@@ -52,11 +76,41 @@ export default function Chat() {
   });
 
   useEffect(() => {
+    const saved = parseThreads(localStorage.getItem(CHAT_STORAGE_KEY));
+    setThreads(saved);
+    if (saved[0]) {
+      setActiveThreadId(saved[0].id);
+      setMessages(saved[0].messages);
+      setSessionId(saved[0].sessionId);
+    }
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
   }, [messages]);
+
+  useEffect(() => {
+    if (!activeThreadId) return;
+    setThreads((prev) => {
+      const now = new Date().toISOString();
+      const next = prev.map((t) =>
+        t.id === activeThreadId
+          ? {
+              ...t,
+              messages,
+              sessionId,
+              updatedAt: now,
+              title: t.title || (messages[0]?.content?.slice(0, 36) || 'New chat'),
+            }
+          : t
+      );
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [messages, sessionId, activeThreadId]);
 
   const sendMessage = () => {
     if (!input.trim() || isLoading) return;
@@ -67,6 +121,10 @@ export default function Chat() {
         description: "Please set VITE_MASTER_API_KEY in your .env file",
       });
       return;
+    }
+
+    if (!activeThreadId) {
+      startNewChat();
     }
 
     const userMsg: Message = {
@@ -94,17 +152,80 @@ export default function Chat() {
     }
   };
 
-  const clearChat = () => {
+  const startNewChat = () => {
+    const id = crypto.randomUUID();
+    const fresh: ChatThread = {
+      id,
+      title: 'New chat',
+      sessionId: undefined,
+      updatedAt: new Date().toISOString(),
+      messages: [],
+    };
+
+    setThreads((prev) => {
+      const next = [fresh, ...prev];
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+    setActiveThreadId(id);
     setMessages([]);
     setSessionId(undefined);
-    toast({
-      title: "Chat cleared",
-      description: "Started a new conversation",
+  };
+
+  const selectThread = (thread: ChatThread) => {
+    setActiveThreadId(thread.id);
+    setMessages(thread.messages || []);
+    setSessionId(thread.sessionId);
+  };
+
+  const clearChat = () => {
+    if (!activeThreadId) return startNewChat();
+    setThreads((prev) => {
+      const next = prev.filter((t) => t.id !== activeThreadId);
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(next));
+      return next;
     });
+    const remaining = threads.filter((t) => t.id !== activeThreadId);
+    if (remaining[0]) {
+      selectThread(remaining[0]);
+    } else {
+      startNewChat();
+    }
+    toast({ title: 'Chat cleared', description: 'Started a new conversation' });
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-4rem)]">
+      <div className="rounded-xl border border-border bg-card p-3 flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">Sessions</h2>
+          <Button variant="outline" size="sm" onClick={startNewChat}>New</Button>
+        </div>
+        <div className="space-y-2 overflow-auto">
+          {threads.length === 0 && (
+            <p className="text-xs text-muted-foreground">No sessions yet</p>
+          )}
+          {threads
+            .slice()
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            .map((t) => (
+              <button
+                key={t.id}
+                onClick={() => selectThread(t)}
+                className={`w-full text-left rounded-lg border px-3 py-2 transition ${
+                  activeThreadId === t.id ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'
+                }`}
+              >
+                <p className="text-sm font-medium truncate">{t.title || 'New chat'}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {t.messages[t.messages.length - 1]?.content || 'No messages'}
+                </p>
+              </button>
+            ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col">
       <div className="flex items-center justify-between pb-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Chat</h1>
@@ -117,7 +238,7 @@ export default function Chat() {
         </div>
         {messages.length > 0 && (
           <Button variant="outline" size="sm" onClick={clearChat}>
-            New Chat
+            Clear
           </Button>
         )}
       </div>
@@ -126,7 +247,7 @@ export default function Chat() {
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Please configure <code className="font-mono text-xs">VITE_MASTER_API_KEY</code> in your .env file to use the admin chat.
+            Please verify server-side admin proxy configuration in Vercel env (API_BASE_URL + MASTER_API_KEY).
           </AlertDescription>
         </Alert>
       )}
@@ -216,7 +337,7 @@ export default function Chat() {
           placeholder={
             isConfigured
               ? "Type a message..."
-              : "Configure API key to start chatting..."
+              : "Configure admin proxy to start chatting..."
           }
           className="resize-none min-h-[48px] max-h-32"
           rows={1}
@@ -230,6 +351,7 @@ export default function Chat() {
         >
           <Send className="w-4 h-4" />
         </Button>
+      </div>
       </div>
     </div>
   );
