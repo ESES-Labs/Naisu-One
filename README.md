@@ -520,16 +520,6 @@ GitHub Actions workflows handle deployment:
 
 ---
 
-## Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/intent-improvement`
-3. Commit changes: `git commit -m 'Add intent batching'`
-4. Push: `git push origin feature/intent-improvement`
-5. Open Pull Request
-
----
-
 ## License
 
 MIT License - see [LICENSE](LICENSE)
@@ -539,7 +529,6 @@ MIT License - see [LICENSE](LICENSE)
 ## Support
 
 - 📧 support@naisu.one
-- 💬 [Discord](https://discord.gg/naisu)
 - 🐦 [@naisu_one](https://twitter.com/naisu_one)
 
 ---
